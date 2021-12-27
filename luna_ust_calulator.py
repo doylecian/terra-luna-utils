@@ -1,7 +1,9 @@
 import json
 from requests import Request, Session
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
-  
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+
 cfg = open('config.json')
 config = json.load(cfg)
 api_key = config['API_KEY']
@@ -44,17 +46,22 @@ def mintUST(amount: int, log=False):
     global ust_market_cap
     global luna_circulating_supply
     global luna_current_price
+    global luna_price_points
+    global ust_market_cap_points
 
     # Increase UST market cap
     ust_market_cap += amount
+    ust_market_cap_points.append(ust_market_cap)
     # Calculate luna burned in minting process
     luna_burned = (amount / luna_current_price)  
     # Reduce circulating supply
     luna_circulating_supply -= luna_burned 
+    luna_supply_points.append(luna_circulating_supply)
     # Cache pre mint price
     luna_old_price = luna_current_price
     # Update price according to new circulating supply
     luna_current_price = (luna_market_cap / luna_circulating_supply) 
+    luna_price_points.append(luna_current_price)
     # Calculate luna price impact of mint 
     luna_price_impact = (luna_current_price - luna_old_price)
     # Print results of mint
@@ -97,6 +104,18 @@ luna_market_cap = luna_metadata['quote']['USD']['market_cap']
 luna_circulating_supply = luna_metadata['circulating_supply']
 ust_market_cap = ust_metadata['quote']['USD']['market_cap']
 
-simulateUSTMarketCap(100000000000)
-printSimulationResults()
+luna_price_points = []
+luna_supply_points = []
+ust_market_cap_points = []
 
+simulateUSTMarketCap(150000000000)
+#printSimulationResults()
+
+fig, ax = plt.subplots(1,1)
+ax.plot(luna_price_points, ust_market_cap_points, label = "Luna price")
+ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: '{0:g}'.format(x/1e9)))
+ax.xaxis.set_major_locator(ticker.MultipleLocator(300))
+plt.title('UST Market cap vs Luna price (At current luna market cap of $35B)')
+plt.xlabel('Luna price ($)')
+plt.ylabel('UST Market cap ($ billions)')
+plt.show()
